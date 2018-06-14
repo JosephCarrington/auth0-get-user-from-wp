@@ -10,8 +10,25 @@
  * License: GPLv3
  *
  */
+require_once 'vendor/autoload.php';
+use Auth0\SDK\JWTVerifier;
 
 function get_user_object_for_auth0($query) {
+  require( plugin_dir_path( __FILE__ ) . 'env.php' );
+  try{
+    $verifier = new JWTVerifier([
+      'supported_algs' => ['HS256'],
+      'client_secret' => $env['client_secret'],
+      'valid_audiences' => $env['valid_audiences'],
+      'authorized_iss' => $env['authorized_iss']
+    ]);
+    return var_dump($verifier);
+    $tokenInfo = $verifier->verifyAndDecode($query['token']);
+  }
+  catch(\Auth0\SDK\Exception\CoreException $e) {
+    return var_dump($e);
+  }
+
   $user = get_user_by('email', $query['email']);
   $auth0_user = array(
     'user_id' => $user->ID,
@@ -25,7 +42,7 @@ function get_user_object_for_auth0($query) {
     'given_name' => null,
     'family_name' => null
   );
-  return $auth0_user;
+  //return $auth0_user;
 };
 
 
@@ -34,11 +51,10 @@ add_action( 'rest_api_init', function() {
     'methods' => 'POST',
     'callback' => 'get_user_object_for_auth0',
     'args' => array(
-      'email' => array(
+      'token' => array(
         'required' => true,
 	'type' => 'string',
-	'decription' => 'The user\'s email address',
-	'format' => 'email'
+	'decription' => 'Auth0\'s JWT',
       )
     )
   ) );
