@@ -38,6 +38,7 @@ function get_user_object_for_auth0($query) {
   global $wpdb;
   $auth0_id = get_user_meta( $user->ID, $wpdb->prefix.'auth0_id', true);
   if(!$auth0_id) return;
+  $user_meta = get_user_meta($user->ID);
 
   $auth0_user = array(
     'user_id' => $user->ID,
@@ -46,10 +47,10 @@ function get_user_object_for_auth0($query) {
     'email' => $user->data->user_email,
     'display_name' => $user->data->display_name,
     'nicename' => $user->data->user_nicename,
-    'first_name' => null,
-    'last_name' => null,
-    'given_name' => null,
-    'family_name' => null
+    'first_name' => $user_meta['first_name'][0],
+    'last_name' => $user_meta['last_name'][0],
+    'given_name' => $user_meta['first_name'][0],
+    'family_name' => $user_meta['last_name'][0]
   );
   return $auth0_user;
 };
