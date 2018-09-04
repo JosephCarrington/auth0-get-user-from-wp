@@ -36,8 +36,20 @@ function get_user_object_for_auth0($query) {
   $user = get_user_by('email', $emailToFind);
   if(!$user) return;
   global $wpdb;
+
   $auth0_id = get_user_meta( $user->ID, $wpdb->prefix.'auth0_id', true);
+  if(!$auth0_id) {
+      $sites = wp_get_sites();
+      foreach($sites as $i => $site) {
+        if(!$auth0_id) {
+            $site_id = $site['blog_id'];
+            $auth0_id = get_user_meta( $user->ID, $wpdb->prefix . $site_id . '_auth0_id', true );
+        }
+      }
+  }
+
   if(!$auth0_id) return;
+
   $user_meta = get_user_meta($user->ID);
 
   $auth0_user = array(
@@ -69,3 +81,17 @@ add_action( 'rest_api_init', function() {
     )
   ) );
 } );
+
+
+function slack_log($var) {
+    $string_val = json_encode($var, JSON_PRETTY_PRINT);
+    if(strlen($string_val) > 1000) {
+    }
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, 'https://hooks.slack.com/services/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');
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(array('text' => '```' . $string_val . '```')));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_exec($ch);
+    curl_close($ch);
+};
