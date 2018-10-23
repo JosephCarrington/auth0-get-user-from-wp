@@ -13,8 +13,6 @@
 require_once 'vendor/autoload.php';
 use Auth0\SDK\JWTVerifier;
 use Auth0\SDK\Helpers\Cache\FileSystemCacheHandler;
-
-
 function get_user_object_for_auth0($query) {
   require( plugin_dir_path( __FILE__ ) . 'env.php' );
   try{
@@ -49,7 +47,6 @@ function get_user_object_for_auth0($query) {
   }
 
   if(!$auth0_id) return;
-
   $user_meta = get_user_meta($user->ID);
 
   $auth0_user = array(
@@ -68,6 +65,38 @@ function get_user_object_for_auth0($query) {
 };
 
 
+function create_user_for_auth0($query) {
+  require( plugin_dir_path( __FILE__ ) . 'env.php' );
+  try{
+    $verifier = new JWTVerifier([
+	  'supported_algs' => ['RS256'],
+      'valid_audiences' => $env['valid_audiences'],
+      'authorized_iss' => $env['authorized_iss'],
+	  'cache' => new FileSystemCacheHandler()
+    ]);
+    $tokenInfo = $verifier->verifyAndDecode($query['token']);
+	// TODO: Check exipration = $tokenInfo->exp
+
+  }
+  catch(\Auth0\SDK\Exception\CoreException $e) {
+    return var_dump($e);
+  }
+  $emailToCreate = $query['email_to_create'];
+  if(username_exists( $emailToCreate ) ) {
+  	// We just checked this before we even got here, so this shouldn't really be possible
+	slack_log($emailToCreate . ' didn\'t exist a second ago, but does now. WTF');
+	die;
+  }
+
+  $password = wp_generate_password( 12, true );
+  $user_id = wp_create_user( $emailToCreate, $password, $emailToCreate );
+  update_user_meta( $user_id, 'first_name', $query['first_name'] );
+  update_user_meta( $user_id, 'last_name', $query['last_name'] );
+  return get_user_by_email( $emailToCreate );
+
+
+};
+
 add_action( 'rest_api_init', function() {
   register_rest_route('mw_auth0/v1', '/user/', array(
     'methods' => 'POST',
@@ -75,23 +104,23 @@ add_action( 'rest_api_init', function() {
     'args' => array(
       'token' => array(
         'required' => true,
-	'type' => 'string',
-	'decription' => 'Auth0\'s JWT',
+		'type' => 'string',
+		'decription' => 'Auth0\'s JWT',
       )
     )
   ) );
+
+  register_rest_route('mw_auth0/v1', '/user_create/', array(
+  		'methods' => 'POST',
+		'callback' => 'create_user_for_auth0',
+		'args' => array(
+			'token' => array(
+				'required' => true,
+				'type' => 'string',
+				'desription' => 'Auth0\'s JWT'
+			)
+		)
+	));
 } );
 
 
-function slack_log($var) {
-    $string_val = json_encode($var, JSON_PRETTY_PRINT);
-    if(strlen($string_val) > 1000) {
-    }
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, 'https://hooks.slack.com/services/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');
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(array('text' => '```' . $string_val . '```')));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_exec($ch);
-    curl_close($ch);
-};
