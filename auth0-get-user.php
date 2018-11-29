@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Auth0 Get User JSON Endpoint 
+ * Plugin Name: Auth0 Get User JSON Endpoint
  * Plugin URI: https://meowwolf.com/
  * Description: Auth0 needs to be able to get a user by it's username from WordPress. This plugin provides an endpoint to do so.
  * Author: Joseph Carrington
@@ -13,7 +13,7 @@
 require_once 'vendor/autoload.php';
 use Auth0\SDK\JWTVerifier;
 use Auth0\SDK\Helpers\Cache\FileSystemCacheHandler;
-function get_user_object_for_auth0($query) {
+/*function get_user_object_for_auth0($query) {
   require( plugin_dir_path( __FILE__ ) . 'env.php' );
   try{
     $verifier = new JWTVerifier([
@@ -44,7 +44,6 @@ function get_user_object_for_auth0($query) {
             $auth0_id = get_user_meta( $user->ID, $wpdb->prefix . $site_id . '_auth0_id', true );
         }
       }
-	  slack_log($auth0_id);
   }
 
   if(!$auth0_id) return;
@@ -85,7 +84,6 @@ function create_user_for_auth0($query) {
   $emailToCreate = $query['email_to_create'];
   if(username_exists( $emailToCreate ) ) {
   	// We just checked this before we even got here, so this shouldn't really be possible
-	slack_log($emailToCreate . ' didn\'t exist a second ago, but does now. WTF');
 	die;
   }
 
@@ -95,6 +93,7 @@ function create_user_for_auth0($query) {
   update_user_meta( $user_id, 'last_name', $query['last_name'] );
   return get_user_by_email( $emailToCreate );
 };
+*/
 
 function verify_token($token) {
 	require_once( plugin_dir_path( __FILE__ ) . 'env.php' );
@@ -118,16 +117,20 @@ function upsert_user_for_auth0($query) {
 	$user_object = $query['user'];
 	$user_first_name = $user_object['user_metadata']['first_name'] ?: $user_object['given_name'];
 	$user_last_name = $user_object['user_metadata']['last_name'] ?: $user_object['family_name'];
-	slack_log($user_object);
 	// Does this user already exist?
+//	slack_log($user_object['nickname'] . ' just logged in');
+    // TODO: CHANGE THIS WHEN YOU GO LIVE DANGIT, AND ALSO ADD TO SANTAFE!!!!!!!!!
+    $shopid = 3;
 	$existing_user = get_user_by( 'email', $user_object['email'] );
 	if( $existing_user ) {
 		// A user with this email already exists, so we set the Auth0 data to whatever Auth0 sent along
 		  $user_repo->update_auth0_object( $existing_user->ID, (object)$user_object );
+		  add_user_to_blog( $shopid, $existing_user->ID, 'customer' );
 	} else {
 		// No user with this email exists, so we create them and run Auth0's mystery functions
 		$password = wp_generate_password( 12, true );
 		$user_id = wp_create_user( $user_object['email'], $password, $user_object['email'] );
+		add_user_to_blog( $shopid, $user_id, 'customer' );
 		$user_repo->update_auth0_object( $user_id, (object)$user_object );
 	}
 
@@ -144,6 +147,7 @@ function upsert_user_for_auth0($query) {
 }
 
 add_action( 'rest_api_init', function() {
+  /*
   register_rest_route('mw_auth0/v1', '/user/', array(
     'methods' => 'POST',
     'callback' => 'get_user_object_for_auth0',
@@ -155,6 +159,7 @@ add_action( 'rest_api_init', function() {
       )
     )
   ) );
+  */
 
   register_rest_route('mw_auth0/v1', '/upsert_user/', array(
   		'methods' => 'POST',
