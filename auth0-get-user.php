@@ -13,13 +13,12 @@
 require_once 'vendor/autoload.php';
 use Auth0\SDK\JWTVerifier;
 use Auth0\SDK\Helpers\Cache\FileSystemCacheHandler;
-/*function get_user_object_for_auth0($query) {
-  require( plugin_dir_path( __FILE__ ) . 'env.php' );
+function get_user_object_for_auth0($query) {
   try{
     $verifier = new JWTVerifier([
 	  'supported_algs' => ['RS256'],
-      'valid_audiences' => $env['valid_audiences'],
-      'authorized_iss' => $env['authorized_iss'],
+      'valid_audiences' => AUTHVAR['valid_audiences'],
+      'authorized_iss' => AUTHVAR['authorized_iss'],
 	  'cache' => new FileSystemCacheHandler()
     ]);
     $tokenInfo = $verifier->verifyAndDecode($query['token']);
@@ -47,6 +46,7 @@ use Auth0\SDK\Helpers\Cache\FileSystemCacheHandler;
   }
 
   if(!$auth0_id) return;
+
   $user_meta = get_user_meta($user->ID);
 
   $auth0_user = array(
@@ -64,43 +64,11 @@ use Auth0\SDK\Helpers\Cache\FileSystemCacheHandler;
   return $auth0_user;
 };
 
-
-function create_user_for_auth0($query) {
-  require( plugin_dir_path( __FILE__ ) . 'env.php' );
-  try{
-    $verifier = new JWTVerifier([
-	  'supported_algs' => ['RS256'],
-      'valid_audiences' => $env['valid_audiences'],
-      'authorized_iss' => $env['authorized_iss'],
-	  'cache' => new FileSystemCacheHandler()
-    ]);
-    $tokenInfo = $verifier->verifyAndDecode($query['token']);
-	// TODO: Check exipration = $tokenInfo->exp
-
-  }
-  catch(\Auth0\SDK\Exception\CoreException $e) {
-    return var_dump($e);
-  }
-  $emailToCreate = $query['email_to_create'];
-  if(username_exists( $emailToCreate ) ) {
-  	// We just checked this before we even got here, so this shouldn't really be possible
-	die;
-  }
-
-  $password = wp_generate_password( 12, true );
-  $user_id = wp_create_user( $emailToCreate, $password, $emailToCreate );
-  update_user_meta( $user_id, 'first_name', $query['first_name'] );
-  update_user_meta( $user_id, 'last_name', $query['last_name'] );
-  return get_user_by_email( $emailToCreate );
-};
-*/
-
 function verify_token($token) {
-	require_once( plugin_dir_path( __FILE__ ) . 'env.php' );
 	$verifier = new JWTVerifier([
 	  'supported_algs' => ['RS256'],
-	  'valid_audiences' => $env['valid_audiences'],
-	  'authorized_iss' => $env['authorized_iss'],
+	  'valid_audiences' => AUTHVAR['valid_audiences'],
+	  'authorized_iss' => AUTHVAR['authorized_iss'],
 	  'cache' => new FileSystemCacheHandler()
 	]);
 	return $verifier->verifyAndDecode($token);
@@ -118,7 +86,6 @@ function upsert_user_for_auth0($query) {
 	$user_first_name = $user_object['user_metadata']['first_name'] ?: $user_object['given_name'];
 	$user_last_name = $user_object['user_metadata']['last_name'] ?: $user_object['family_name'];
 	// Does this user already exist?
-//	slack_log($user_object['nickname'] . ' just logged in');
     // TODO: CHANGE THIS WHEN YOU GO LIVE DANGIT, AND ALSO ADD TO SANTAFE!!!!!!!!!
     $shopid = 3;
 	$existing_user = get_user_by( 'email', $user_object['email'] );
@@ -146,8 +113,10 @@ function upsert_user_for_auth0($query) {
 	return $wp_user;
 }
 
+
+
 add_action( 'rest_api_init', function() {
-  /*
+
   register_rest_route('mw_auth0/v1', '/user/', array(
     'methods' => 'POST',
     'callback' => 'get_user_object_for_auth0',
@@ -159,7 +128,7 @@ add_action( 'rest_api_init', function() {
       )
     )
   ) );
-  */
+ 
 
   register_rest_route('mw_auth0/v1', '/upsert_user/', array(
   		'methods' => 'POST',
@@ -175,3 +144,15 @@ add_action( 'rest_api_init', function() {
 } );
 
 
+function slack_log($var) {
+	$string_val = json_encode($var, JSON_PRETTY_PRINT);
+	if(strlen($string_val) > 1000) {
+	}
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, 'https://hooks.slack.com/services/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');
+	curl_setopt($ch, CURLOPT_POST, true);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(array('text' => '```' . $string_val . '```')));
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	curl_exec($ch);
+	curl_close($ch);
+}
