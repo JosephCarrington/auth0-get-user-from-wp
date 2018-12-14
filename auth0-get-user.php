@@ -92,7 +92,9 @@ function upsert_user_for_auth0($query) {
 	if( $existing_user ) {
 		// A user with this email already exists, so we set the Auth0 data to whatever Auth0 sent along
 		  $user_repo->update_auth0_object( $existing_user->ID, (object)$user_object );
-		  add_user_to_blog( $shopid, $existing_user->ID, 'customer' );
+		  if (!is_user_member_of_blog( $existing_user->ID, $shopid ) ) {
+			  add_user_to_blog( $shopid, $existing_user->ID, 'customer' );
+		  }
 	} else {
 		// No user with this email exists, so we create them and run Auth0's mystery functions
 		$password = wp_generate_password( 12, true );
