@@ -86,8 +86,7 @@ function upsert_user_for_auth0($query) {
 	$user_first_name = $user_object['user_metadata']['first_name'] ?: $user_object['given_name'];
 	$user_last_name = $user_object['user_metadata']['last_name'] ?: $user_object['family_name'];
 	// Does this user already exist?
-    // TODO: CHANGE THIS WHEN YOU GO LIVE DANGIT, AND ALSO ADD TO SANTAFE!!!!!!!!!
-    $shopid = 3;
+	$shopid = 3;
 	$existing_user = get_user_by( 'email', $user_object['email'] );
 	if( $existing_user ) {
 		// A user with this email already exists, so we set the Auth0 data to whatever Auth0 sent along
