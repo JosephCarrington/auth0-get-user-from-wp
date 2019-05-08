@@ -144,17 +144,3 @@ add_action( 'rest_api_init', function() {
 		)
 	));
 } );
-
-
-function slack_log($var) {
-	$string_val = json_encode($var, JSON_PRETTY_PRINT);
-	if(strlen($string_val) > 1000) {
-	}
-	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, [YOUR SLACK HOOK]');
-	curl_setopt($ch, CURLOPT_POST, true);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(array('text' => '```' . $string_val . '```')));
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	curl_exec($ch);
-	curl_close($ch);
-}
